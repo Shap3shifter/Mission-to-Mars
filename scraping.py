@@ -23,6 +23,7 @@ def scrape_all():
           "news_paragraph": news_paragraph,
           "featured_image": featured_image(browser),
           "facts": mars_facts(),
+          "hemispheres": hemispheres(browser),
           "last_modified": dt.datetime.now()
     }
     
@@ -99,7 +100,7 @@ def mars_facts():
     try:
         #use 'read_html' to scrape the facts table into a dataframe
         df = pd.read_html('http://space-facts.com/mars/')[0]
-    except: BaseException:
+    except BaseException:
         return None
     
     #Assign columns and set 
@@ -108,6 +109,60 @@ def mars_facts():
    
     #Convert dataframe into HTML format, add bootstrap
     return df.to_html(classes="table table-stripped")
+
+def hemispheres(browser):
+    
+    url = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
+    browser.visit(url)
+
+    hemisphere_image_urls = []
+
+    #Establish the links variable
+    link = browser.find_by_css("a.product-item h3")
+    num_links = len(link)
+
+    #Create a for loop that goes through the product-item links on page
+    for i in range(num_links):
+        #Initializing hemisphere Dict
+        hemisphere = {}
+
+        #find the title link
+        browser.find_by_css("a.product-item h3")[i].click()
+
+        #pull the sample image
+        sample_elem = browser.links.find_by_text('Sample').first
+        hemisphere['img_url'] = sample_elem['href']
+
+        #get the title text
+        hemisphere['title'] = browser.find_by_css("h2.title").text
+
+        #append urls to hemisphere_image_urls list
+        hemisphere_image_urls.append(hemisphere)
+
+        #navigate back
+        browser.back()
+    
+    return hemisphere_image_urls
+
+def scrape_hemisphere(html_text):
+    # parse html text
+    hemi_soup = soup(html_text, "html.parser")
+    
+    # try/except for error handling
+    try:
+        title_elem = hemi_soup.find("h2", class_="title").get_text()
+        sample_elem = hemi_soup.find("a", text="Sample").get("href")
+    
+    except AttributeError:
+        title_elem = None
+        sample_elem = None
+        
+    hemispheres = {
+        "title": title_elem,
+        "img_url": sample_elem
+    }
+    
+    return hemispheres
 
 if __name__ == "__main__":
     # If running as script, print scraped data
